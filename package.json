@@ -1,0 +1,16 @@
+{
+  "name": "mr.ak-s-a-",
+  "version": "1.0.0",
+  "main": "legend.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.2.1",
+    "puppeteer": "^24.34.0"
+  }
+}
