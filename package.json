@@ -1,17 +1,17 @@
 {
-  "name": "mr.ak-s-a-",
-  "version": "1.0.0",
+  "name": "payu-gateway-api",
+  "version": "1.0.1",
   "main": "legend.js",
   "scripts": {
     "start": "node legend.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["payu", "card-checker", "puppeteer"],
+  "author": "AK",
   "license": "ISC",
-  "description": "",
+  "description": "PayU card checker using Puppeteer automation",
   "dependencies": {
     "express": "^5.2.1",
-    "puppeteer": "^24.34.0"
+    "puppeteer-core": "^24.34.0"
   }
 }

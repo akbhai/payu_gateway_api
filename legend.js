@@ -4,9 +4,33 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 
+// Error handling
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
+// Startup logs
+console.log('[*] ========================================');
+console.log('[*] PayU Gateway API Starting...');
+console.log('[*] ========================================');
+console.log('[*] Node version:', process.version);
+console.log('[*] Platform:', process.platform);
+console.log('[*] Arch:', process.arch);
+console.log('[*] PORT:', process.env.PORT || 3000);
+console.log('[*] PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser');
+console.log('[*] BROWSERLESS_TOKEN:', process.env.BROWSERLESS_TOKEN ? 'SET' : 'NOT SET');
+console.log('[*] ========================================');
+
 const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
 if (!fs.existsSync(SCREENSHOT_DIR)) {
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+    console.log('[*] Created screenshots directory');
 }
 
 // Browserless configuration
@@ -402,4 +426,15 @@ app.get('/', (req, res) => res.json({
 app.get('/health', (req, res) => res.json({status: 'ok', timestamp: Date.now()}));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`[*] PayU Checker v9 on port ${PORT}`));
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('[*] ========================================');
+    console.log(`[*] ✅ PayU Checker v9 ONLINE`);
+    console.log(`[*] 🌐 Server listening on port ${PORT}`);
+    console.log(`[*] 🔗 Health: http://localhost:${PORT}/health`);
+    console.log(`[*] 🔗 Check: POST http://localhost:${PORT}/check`);
+    console.log('[*] ========================================');
+}).on('error', (err) => {
+    console.error('[FATAL] Server failed to start:', err);
+    process.exit(1);
+});
