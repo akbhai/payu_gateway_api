@@ -34,7 +34,8 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 }
 
 // Browserless configuration
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
+// Fallback to hardcoded token if environment variable not set
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '2TkYKbxsq8LjkUB165b3f401964c7b9dc4cbf240e69ed9f52';
 const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
 
 console.log('[*] Browserless mode:', USE_BROWSERLESS ? 'ENABLED' : 'DISABLED');
