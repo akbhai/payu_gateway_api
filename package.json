@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "legend.js",
   "scripts": {
+    "start": "node legend.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
