@@ -34,10 +34,9 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 }
 
 // Browserless configuration
-// DISABLED: Railway has issues with Browserless WebSocket connections
-// Using local Chromium instead for Railway compatibility
-const BROWSERLESS_TOKEN = ''; // Disabled
-const USE_BROWSERLESS = false; // Force disable Browserless
+// Token with fallback for Render deployment
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '2TkYKbxsq8LjkUB165b3f401964c7b9dc4cbf240e69ed9f52';
+const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
 
 console.log('[*] Browserless mode:', USE_BROWSERLESS ? 'ENABLED' : 'DISABLED');
 
