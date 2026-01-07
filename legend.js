@@ -34,8 +34,8 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 }
 
 // Browserless configuration
-// Token with fallback for Render deployment
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '2TkYKbxsq8LjkUB165b3f401964c7b9dc4cbf240e69ed9f52';
+// Updated token with increased timeout for Railway compatibility
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '2TkYKbxsq8LjkUB3f27cf8fa0ad2a464d5c8221a03186b100';
 const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
 
 console.log('[*] Browserless mode:', USE_BROWSERLESS ? 'ENABLED' : 'DISABLED');
@@ -47,12 +47,13 @@ async function testCC(cc) {
         // Connect to Browserless or launch locally
         if (USE_BROWSERLESS) {
             console.log('[*] Connecting to Browserless...');
+            console.log('[*] Token:', BROWSERLESS_TOKEN.substring(0, 20) + '...');
             try {
                 browser = await puppeteer.connect({
                     browserWSEndpoint: `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`,
-                    timeout: 30000
+                    timeout: 60000  // Increased to 60 seconds for Railway
                 });
-                console.log('[*] Browserless connected successfully');
+                console.log('[*] ✅ Browserless connected successfully!');
             } catch (browserlessError) {
                 console.error('[ERROR] Browserless connection failed:', browserlessError.message);
                 console.log('[*] Falling back to local Chromium...');
