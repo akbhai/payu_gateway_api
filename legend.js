@@ -37,6 +37,8 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
 const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
 
+console.log('[*] Browserless mode:', USE_BROWSERLESS ? 'ENABLED' : 'DISABLED');
+
 async function testCC(cc) {
     let browser;
     
@@ -44,9 +46,39 @@ async function testCC(cc) {
         // Connect to Browserless or launch locally
         if (USE_BROWSERLESS) {
             console.log('[*] Connecting to Browserless...');
-            browser = await puppeteer.connect({
-                browserWSEndpoint: `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`
-            });
+            try {
+                browser = await puppeteer.connect({
+                    browserWSEndpoint: `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`,
+                    timeout: 30000
+                });
+                console.log('[*] Browserless connected successfully');
+            } catch (browserlessError) {
+                console.error('[ERROR] Browserless connection failed:', browserlessError.message);
+                console.log('[*] Falling back to local Chromium...');
+                // Fallback to local browser
+                browser = await puppeteer.launch({
+                    headless: 'new',
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
+                        '--disable-software-rasterizer',
+                        '--disable-extensions',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--hide-scrollbars',
+                    '--metrics-recording-only',
+                    '--mute-audio',
+                    '--no-first-run',
+                    '--safebrowsing-disable-auto-update'
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+                timeout: 60000
+                });
+            }
         } else {
             console.log('[*] Launching local browser...');
             browser = await puppeteer.launch({
