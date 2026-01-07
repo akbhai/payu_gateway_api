@@ -34,9 +34,10 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 }
 
 // Browserless configuration
-// Fallback to hardcoded token if environment variable not set
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '2TkYKbxsq8LjkUB165b3f401964c7b9dc4cbf240e69ed9f52';
-const USE_BROWSERLESS = !!BROWSERLESS_TOKEN;
+// DISABLED: Railway has issues with Browserless WebSocket connections
+// Using local Chromium instead for Railway compatibility
+const BROWSERLESS_TOKEN = ''; // Disabled
+const USE_BROWSERLESS = false; // Force disable Browserless
 
 console.log('[*] Browserless mode:', USE_BROWSERLESS ? 'ENABLED' : 'DISABLED');
 
@@ -81,9 +82,10 @@ async function testCC(cc) {
                 });
             }
         } else {
-            console.log('[*] Launching local browser...');
+            console.log('[*] Launching local Chromium browser...');
+            console.log('[*] Executable path:', process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser');
             browser = await puppeteer.launch({
-                headless: 'new',
+                headless: true,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -92,6 +94,8 @@ async function testCC(cc) {
                     '--disable-software-rasterizer',
                     '--disable-extensions',
                     '--disable-background-networking',
+                    '--single-process', // Important for Railway
+                    '--no-zygote', // Important for Railway
                     '--disable-default-apps',
                     '--disable-sync',
                     '--disable-translate',
